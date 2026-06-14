@@ -54,6 +54,7 @@ jobs:
           name: prisrapport-${{ github.run_number }}
           path: |
             data/rapport.md
+            data/rapport.html
             data/optimalisert.json
           retention-days: 60
 
@@ -64,8 +65,8 @@ jobs:
           server_port: 587
           username: camplillehammer@gmail.com
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: Prisrapport Nordgards Hagen
-          body: file://data/rapport.md
+          subject: "${{ env.PRISRAPPORT_SUBJECT || 'Prisrapport Nordgards Hagen' }}"
+          html_body: file://data/rapport.html
           to: camplillehammer@gmail.com
           from: Prisagent <camplillehammer@gmail.com>
 
