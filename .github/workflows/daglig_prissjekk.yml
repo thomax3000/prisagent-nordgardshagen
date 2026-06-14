@@ -68,7 +68,6 @@ jobs:
           body: file://data/rapport.md
           to: camplillehammer@gmail.com
           from: Prisagent <camplillehammer@gmail.com>
-          content_type: text/plain
 
       - name: Vis rapport i logg
         run: cat data/rapport.md
