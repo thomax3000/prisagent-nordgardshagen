@@ -1,20 +1,20 @@
 // ================================================================
 // KONFIGURASJON — Nordgårds Hagen Prisagent
+// Oppdatert via innstillingspanel
 // ================================================================
 
 module.exports = {
 
   // --- Eiendom ---
-  EIENDOM:      "Nordgårds Hagen",
+  EIENDOM:      "Nordgards Hagen",
   BELIGGENHET:  "Lillehammer",
   ADRESSE:      "Sollivegen 23, 2611 Lillehammer",
   LAT:          61.1043856,
   LON:          10.5192721,
 
-  // Din Booking.com score
-  DIN_SCORE:    8,
-
-  // --- Konkurrenter (noyaktig navn fra Booking.com) ---
+  // --- Konkurrenter (Booking.com-navn) ---
+  // Leiligheter/hele hus: "Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments"
+  // Budsjetthoteller: "Oyer Feriehus"
   KONKURRENTER: ["Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments", "Oyer Feriehus"],
 
   // --- Priser (NOK) ---
@@ -36,7 +36,6 @@ module.exports = {
   ANTHROPIC_API_URL: "https://api.anthropic.com/v1/messages",
   BOOKING_MCP_URL:   "https://demandapi-mcp.booking.com/v1/mcp/8132308",
 
-  // --- Analyse ---
   DAGER_FREMOVER: 30,
 
   HOYTIDER: [
