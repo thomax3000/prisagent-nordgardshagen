@@ -1,18 +1,12 @@
-# ================================================================
-# GitHub Actions — Daglig Prissjekk — Nordgårds Hagen
-# Kjører kl. 07:00 norsk tid (06:00 UTC) hver dag.
-# Kan også startes manuelt under "Actions"-fanen.
-# ================================================================
-
 name: Daglig Prissjekk
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 07:00 norsk tid (UTC+1) / 08:00 sommertid
-  workflow_dispatch:        # Manuell kjøring med ett klikk
+    - cron: '0 6 * * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write           # Trengs for å committe historikk tilbake til repo
+  contents: write
 
 jobs:
   prissjekk:
@@ -44,7 +38,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node agents/agent4_strategen.js
 
-      - name: Lagre prishistorikk tilbake til repo
+      - name: Lagre prishistorikk
         run: |
           git config --global user.name "Prisagent Bot"
           git config --global user.email "prisagent@nordgardshagen.no"
@@ -63,17 +57,17 @@ jobs:
             data/optimalisert.json
           retention-days: 60
 
-      - name: Send prisrapport på e-post
+      - name: Send prisrapport paa e-post
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 587
           username: camplillehammer@gmail.com
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          subject: "Prisrapport Nordgårds Hagen"
+          subject: Prisrapport Nordgards Hagen
           body: file://data/rapport.md
           to: camplillehammer@gmail.com
-          from: Prisagent Nordgårds Hagen <camplillehammer@gmail.com>
+          from: Prisagent <camplillehammer@gmail.com>
           content_type: text/plain
 
       - name: Vis rapport i logg
