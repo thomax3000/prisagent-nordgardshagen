@@ -1,9 +1,9 @@
 // ================================================================
 // AGENT 1 — MARKEDSSPEIDET
-// Skanner Booking.com for 30 dager fremover rundt Lillehammer.
+// Skanner Booking.com for 30 dager fremover rundt Hafjell/Oyer.
 // Registrerer ikke bare priser, men også KNAPPHETSINDEKS:
 // Hvor mange konkurrenter er fortsatt tilgjengelige?
-// Utsolgte konkurrenter = høy etterspørsel = hev din pris.
+// Utsolgte konkurrenter = hoy etterspørsel = hev din pris.
 // Lagrer rådata + oppdaterer historikk for trendanalyse.
 // ================================================================
 
@@ -15,6 +15,7 @@ const pad     = (n) => String(n).padStart(2, "0");
 const toISO   = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
 
+// ---- Booking.com-søk via Anthropic API + MCP ----
 async function searchBooking(checkIn, checkOut, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -39,8 +40,8 @@ Format each property exactly as:
 Include ALL properties returned. If zero results, return [].`,
           messages: [{
             role: "user",
-            content: `Search apartments and holiday homes in Lillehammer, Norway (including nearby areas like Nordseter, Sjusjøen, Hafjell).
-Check-in: ${checkIn}, check-out: ${checkOut}. 2 adults.
+            content: `Search apartments and holiday homes in Lillehammer, Norway (including nearby areas like Nordseter, Sjusjoen, Hafjell).
+Check-in: ${checkIn}, check-out: ${checkOut}. 2 adults, 2 children aged 10.
 Return ALL available properties as JSON array.`,
           }],
           mcp_servers: [{ type: "url", url: CFG.BOOKING_MCP_URL, name: "booking-com" }],
@@ -57,7 +58,7 @@ Return ALL available properties as JSON array.`,
 
     } catch (e) {
       if (attempt < retries) {
-        console.log(`  ⚠ Prøver igjen (forsøk ${attempt+2})...`);
+        console.log(`  Warning: Proever igjen (forsøk ${attempt+2})...`);
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
       } else {
         throw e;
@@ -66,18 +67,20 @@ Return ALL available properties as JSON array.`,
   }
 }
 
+// ---- Match konkurrent mot søkeresultater ----
 function matchKonkurrent(props, navn) {
-  const key = navn.toLowerCase().replace(/[^a-z0-9æøå\s]/g,"").split(" ").filter(w=>w.length>3)[0]
+  const key = navn.toLowerCase().replace(/[^a-z0-9\s]/g,"").split(" ").filter(w=>w.length>3)[0]
     || navn.substring(0,6).toLowerCase();
   return props.find(p => p.name?.toLowerCase().includes(key));
 }
 
+// ---- Hovedfunksjon ----
 async function run() {
-  console.log("🔭 Agent 1 — Markedsspeidet starter");
+  console.log("Agent 1 — Markedsspeidet starter");
   console.log(`   Skanner ${CFG.DAGER_FREMOVER} dager fremover i ${CFG.BELIGGENHET}...\n`);
 
   const today = new Date(); today.setHours(0,0,0,0);
-  const kjøring = {
+  const kjoring = {
     dato: toISO(today),
     tidspunkt: new Date().toISOString(),
     eiendom: CFG.EIENDOM,
@@ -92,10 +95,13 @@ async function run() {
 
     try {
       const props = await searchBooking(checkIn, checkOut);
+
+      // Filtrer bort Nordgards Hagen selv
       const marked = props.filter(p =>
-        p.name && !p.name.toLowerCase().match(/nordg[aå]/i)
+        p.name && !p.name.toLowerCase().match(/nordg[a]/i)
       );
 
+      // Registrer knapphetsindeks
       const konkurrentStatus = {};
       let antallTilgjengelige = 0;
 
@@ -133,12 +139,12 @@ async function run() {
         totaltISokeresultat: marked.length,
       };
 
-      kjøring.dager.push(dagData);
-      console.log(`✓ Tilgjengelig: ${antallTilgjengelige}/${CFG.KONKURRENTER.length} | Snitt: ${markedsSnitt ? markedsSnitt.toLocaleString("nb-NO")+" kr" : "—"}`);
+      kjoring.dager.push(dagData);
+      console.log(`OK Tilgjengelig: ${antallTilgjengelige}/${CFG.KONKURRENTER.length} | Snitt: ${markedsSnitt ? markedsSnitt.toLocaleString("nb-NO")+" kr" : "—"}`);
 
     } catch (e) {
-      console.log(`✗ Feil: ${e.message}`);
-      kjøring.dager.push({
+      console.log(`Feil: ${e.message}`);
+      kjoring.dager.push({
         dato: checkIn, ukedag: d.getDay(), erHelg: d.getDay()===5||d.getDay()===6,
         antallTilgjengelige: null, totalKonkurrenter: CFG.KONKURRENTER.length,
         knapphetsRatio: null, markedsSnitt: null, markedsMin: null, markedsMaks: null,
@@ -149,25 +155,27 @@ async function run() {
     if (i < CFG.DAGER_FREMOVER - 1) await new Promise(r => setTimeout(r, 400));
   }
 
+  // ---- Lagre rådata ----
   const dataDir = path.join(__dirname, "..", "data");
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  fs.writeFileSync(path.join(dataDir, "raw_prices.json"), JSON.stringify(kjøring, null, 2));
+  fs.writeFileSync(path.join(dataDir, "raw_prices.json"), JSON.stringify(kjoring, null, 2));
 
+  // ---- Oppdater historikk ----
   const historikkPath = path.join(dataDir, "historikk.json");
   let historikk = [];
   if (fs.existsSync(historikkPath)) {
     try { historikk = JSON.parse(fs.readFileSync(historikkPath, "utf8")); } catch {}
   }
   const kompakt = {
-    dato: kjøring.dato,
-    snittMarked: kjøring.dager.map(d => ({ dato: d.dato, snitt: d.markedsSnitt, knapphet: d.knapphetsRatio })),
+    dato: kjoring.dato,
+    snittMarked: kjoring.dager.map(d => ({ dato: d.dato, snitt: d.markedsSnitt, knapphet: d.knapphetsRatio })),
   };
   historikk = [kompakt, ...historikk].slice(0, 90);
   fs.writeFileSync(historikkPath, JSON.stringify(historikk, null, 2));
 
-  const vellykkede = kjøring.dager.filter(d => d.markedsSnitt !== null).length;
-  console.log(`\n✅ Agent 1 ferdig — ${vellykkede}/${CFG.DAGER_FREMOVER} dager hentet.`);
+  const vellykkede = kjoring.dager.filter(d => d.markedsSnitt !== null).length;
+  console.log(`\nAgent 1 ferdig — ${vellykkede}/${CFG.DAGER_FREMOVER} dager hentet.`);
   console.log(`   Historikk: ${historikk.length} dagers data lagret.`);
 }
 
-run().catch(e => { console.error("\n💥 Agent 1 krasjet:", e.message); process.exit(1); });
+run().catch(e => { console.error("\nAgent 1 krasjet:", e.message); process.exit(1); });
