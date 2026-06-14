@@ -1,6 +1,4 @@
 // Nordgårds Hagen Prisagent — config.js
-// Oppdatert via innstillingspanel
-
 module.exports = {
   EIENDOM:     "Nordgards Hagen",
   BELIGGENHET: "Lillehammer",
@@ -8,12 +6,10 @@ module.exports = {
   LAT:         61.1043856,
   LON:         10.5192721,
 
-  // Leiligheter/hele hus: "Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments"
-  // Budsjetthoteller: "Oyer Feriehus"
-  KONKURRENTER: ["Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments", "Oyer Feriehus"],
+  KONKURRENTER: ["Jorekstad Ferieleiligheter", "Stasjonen Hotel", "The Gingerbread House", "Lillehammer Hostel", "Birkebeineren Hotel & Apartments", "Scandic Victoria Lillehammer", "Scandic Lillehammer Hotel", "Lillehammer Camping - Sentrums leilighet", "Lillehammer Camping"],
 
-  MIN_PRIS: 1400,
-  MAX_PRIS: 4200,
+  MIN_PRIS: 990,
+  MAX_PRIS: 4500,
 
   BASIS_PRIS: { 0:1900, 1:1600, 2:1600, 3:1700, 4:1900, 5:2500, 6:2700 },
 
