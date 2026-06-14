@@ -4,56 +4,45 @@
 # Kan også startes manuelt under "Actions"-fanen.
 # ================================================================
 
-
 name: Daglig Prissjekk
-
 
 on:
   schedule:
-    - cron: '0 6 * * *'→ Runs at 06:00   # 07:00 norsk tid (UTC+1) / 08:00 sommertid
+    - cron: '0 6 * * *'   # 07:00 norsk tid (UTC+1) / 08:00 sommertid
   workflow_dispatch:        # Manuell kjøring med ett klikk
-
 
 permissions:
   contents: write           # Trengs for å committe historikk tilbake til repo
-
 
 jobs:
   prissjekk:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-
     steps:
       - name: Hent kode
         uses: actions/checkout@v4
-
 
       - name: Sett opp Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: '24'
 
-
       - name: Agent 1 - Markedsspeidet
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node agents/agent1_markedsspeidet.js
 
-
       - name: Agent 2 - Ettersporselsanalytikeren
         run: node agents/agent2_ettersporselsanalytiker.js
 
-
       - name: Agent 3 - Prisoptimalisereren
         run: node agents/agent3_prisoptimalisereren.js
-
 
       - name: Agent 4 - Strategen
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node agents/agent4_strategen.js
-
 
       - name: Lagre prishistorikk tilbake til repo
         run: |
@@ -65,7 +54,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Last opp prisrapport
         uses: actions/upload-artifact@v4
         with:
@@ -74,3 +62,19 @@ jobs:
             data/rapport.md
             data/optimalisert.json
           retention-days: 60
+
+      - name: Send prisrapport på e-post
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: camplillehammer@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          subject: "Prisrapport Nordgårds Hagen"
+          body: file://data/rapport.md
+          to: camplillehammer@gmail.com
+          from: Prisagent Nordgårds Hagen <camplillehammer@gmail.com>
+          content_type: text/plain
+
+      - name: Vis rapport i logg
+        run: cat data/rapport.md
