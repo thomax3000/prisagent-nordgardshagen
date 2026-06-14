@@ -13,9 +13,9 @@ module.exports = {
   LON:          10.5192721,
 
   // --- Konkurrenter (Booking.com-navn) ---
-  // Leiligheter/hele hus: "Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments"
-  // Budsjetthoteller: "Oyer Feriehus"
-  KONKURRENTER: ["Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments", "Oyer Feriehus"],
+  // Leiligheter/hele hus: "Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments", "Sanns villa", "Jorekstad Ferieleiligheter"
+  // Budsjetthoteller: "Oyer Feriehus", "Stasjonen Hotel"
+  KONKURRENTER: ["Hafjell Alpinlandsby", "Sjusjoen Mountain Lodge", "Lillehammer Fjellstue", "Nordseter Apartments", "Sanns villa", "Jorekstad Ferieleiligheter", "Oyer Feriehus", "Stasjonen Hotel"],
 
   // --- Priser (NOK) ---
   MIN_PRIS:     1400,
