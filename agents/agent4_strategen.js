@@ -25,6 +25,8 @@ function strategiEmoji(s) {
   return m[s] || "•";
 }
 
+function kr(v) { return (v ?? 0).toLocaleString("nb-NO"); }
+
 function lagDataSammendrag(opt) {
   const topp = opt.toppHandlinger.map(d => ({
     dato:         datoNO(d.dato),
@@ -127,8 +129,8 @@ function lagHTMLRapport(opt, briefMD, nu, dagHeader) {
     return `
       <tr style="border-bottom:1px solid #e5e7eb;">
         <td style="padding:8px 12px;white-space:nowrap;">${datoNO(d.dato)}${helg}</td>
-        <td style="padding:8px 12px;text-align:right;">${d.dagensBasispris.toLocaleString("nb-NO")} kr</td>
-        <td style="padding:8px 12px;text-align:right;font-weight:700;">${d.anbefaltPris.toLocaleString("nb-NO")} kr</td>
+        <td style="padding:8px 12px;text-align:right;">${kr(d.dagensBasispris)} kr</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;">${kr(d.anbefaltPris)} kr</td>
         <td style="padding:8px 12px;text-align:right;color:${d.avvikProsent>0?"#16a34a":"#dc2626"};font-weight:600;">${avvikStr}</td>
         <td style="padding:8px 12px;"><span style="background:${farge};color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">${strategiEmoji(d.strategi)} ${d.strategi}</span></td>
         <td style="padding:8px 12px;text-align:center;">${knapph}</td>
@@ -226,7 +228,7 @@ async function run() {
       : d.urgencyScore >= 40
         ? `🟡 ${d.urgencyScore}`
         : `⚪ ${d.urgencyScore}`;
-    rapport += `| ${datoNO(d.dato)}${helg} | ${d.dagensBasispris.toLocaleString("nb-NO")} | **${d.anbefaltPris.toLocaleString("nb-NO")}** | ${avvikStr} | ${strategiEmoji(d.strategi)} ${d.strategi} | ${knapphStr} | ${urgStr} |\n`;
+    rapport += `| ${datoNO(d.dato)}${helg} | ${kr(d.dagensBasispris)} | **${kr(d.anbefaltPris)}** | ${avvikStr} | ${strategiEmoji(d.strategi)} ${d.strategi} | ${knapphStr} | ${urgStr} |\n`;
   });
 
   rapport += `\n---\n`;
