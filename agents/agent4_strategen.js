@@ -79,7 +79,7 @@ Format:
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-opus-4-8",
+      model: "claude-sonnet-4-6",
       max_tokens: 600,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -95,10 +95,12 @@ function lagFallbackRapport(opt) {
   r += `## Markedsstatus — ${opt.markedstemperatur} etterspørsel\n\n`;
   r += `## 🎯 Handle i dag\n\n`;
   opt.toppHandlinger.slice(0,3).forEach((d, i) => {
-    const diff    = d.anbefaltPris - d.dagensBasispris;
+    const basispris = d.dagensBasispris ?? 0;
+    const anbefalt  = d.anbefaltPris ?? 0;
+    const diff    = anbefalt - basispris;
     const retning = diff > 0
-      ? `HEV fra ${d.dagensBasispris.toLocaleString("nb-NO")} → ${d.anbefaltPris.toLocaleString("nb-NO")} kr (+${d.avvikProsent}%)`
-      : `SENK fra ${d.dagensBasispris.toLocaleString("nb-NO")} → ${d.anbefaltPris.toLocaleString("nb-NO")} kr (${d.avvikProsent}%)`;
+      ? `HEV fra ${basispris.toLocaleString("nb-NO")} → ${anbefalt.toLocaleString("nb-NO")} kr (+${d.avvikProsent}%)`
+      : `SENK fra ${basispris.toLocaleString("nb-NO")} → ${anbefalt.toLocaleString("nb-NO")} kr (${d.avvikProsent}%)`;
     r += `${i+1}. ${strategiEmoji(d.strategi)} **${datoNO(d.dato)}** — ${retning}\n`;
     r += `   Urgency: ${d.urgencyScore}/100\n\n`;
   });
