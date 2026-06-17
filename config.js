@@ -1,6 +1,6 @@
 // Nordgårds Hagen Prisagent — config.js
 module.exports = {
-  EIENDOM:     "Nordgards Hagen",
+  EIENDOM:     "Nordgårds Hagen",
   BELIGGENHET: "Lillehammer",
   ADRESSE:     "Sollivegen 23, 2611 Lillehammer",
   LAT:         61.1043856,
