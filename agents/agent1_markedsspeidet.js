@@ -27,7 +27,7 @@ async function searchBooking(checkIn, checkOut, retries = 2) {
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
+          model: "claude-opus-4-8",
           max_tokens: 3000,
           system: `You search Booking.com for vacation rentals and return ONLY a valid JSON array.
 No markdown, no backticks, no explanation whatsoever.
