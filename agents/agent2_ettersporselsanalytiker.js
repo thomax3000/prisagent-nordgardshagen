@@ -73,7 +73,7 @@ function beregnUrgency(dagerTil, etterspørsel, erHelg, høytid) {
 }
 
 function run() {
-  console.log("🧠 Agent 2 — Etterspørselsanalytikeren starter...");
+  console.log("Agent 2 — Etterspørselsanalytikeren starter...");
 
   const rawPath       = path.join(__dirname, "..", "data", "raw_prices.json");
   const historikkPath = path.join(__dirname, "..", "data", "historikk.json");
@@ -87,10 +87,14 @@ function run() {
 
   const today = new Date(); today.setHours(0,0,0,0);
 
+  // Bruk live dinScore fra Agent 1 hvis tilgjengelig, ellers fall tilbake til config
+  const dinScore = raw.dinScore || CFG.DIN_SCORE;
+
   const analyse = {
     analysert: new Date().toISOString(),
     eiendom: CFG.EIENDOM,
-    score: CFG.DIN_SCORE,
+    score: dinScore,
+    dinScore,
     antallHistorikkdager: historikk.length,
     markedstemperatur: null,
     dager: [],
@@ -123,6 +127,8 @@ function run() {
       prisTrend:        trend,
       etterspørsel,
       urgencyScore:     urgency,
+      minPris:          dag.minPris ?? null,
+      erBooket:         dag.erBooket ?? false,
       antallTilgjengelige: dag.antallTilgjengelige,
       totalKonkurrenter:   dag.totalKonkurrenter,
       knapphetsRatio:      dag.knapphetsRatio,
@@ -143,12 +149,15 @@ function run() {
 
   const høyUrgency      = analyse.dager.filter(d => d.urgencyScore >= 70).length;
   const høyEtterspørsel = analyse.dager.filter(d => ["HØY","EKSTREMT_HØY","MODERAT_HØY"].includes(d.etterspørsel)).length;
+  const booketDager     = analyse.dager.filter(d => d.erBooket).length;
 
-  console.log(`\n✅ Agent 2 ferdig.`);
-  console.log(`   🌡 Markedstemperatur: ${analyse.markedstemperatur}`);
-  console.log(`   🔥 Dager med høy urgency: ${høyUrgency}`);
-  console.log(`   📈 Dager med høy etterspørsel: ${høyEtterspørsel}`);
-  console.log(`   📊 Historikkdager tilgjengelig: ${historikk.length}`);
+  console.log(`\nAgent 2 ferdig.`);
+  console.log(`   Markedstemperatur: ${analyse.markedstemperatur}`);
+  console.log(`   DIN score brukt: ${dinScore}`);
+  console.log(`   Dager med høy urgency: ${høyUrgency}`);
+  console.log(`   Dager med høy etterspørsel: ${høyEtterspørsel}`);
+  console.log(`   Booket dager (din kalender): ${booketDager}`);
+  console.log(`   Historikkdager tilgjengelig: ${historikk.length}`);
 }
 
 run();

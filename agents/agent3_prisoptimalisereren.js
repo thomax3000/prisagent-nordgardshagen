@@ -2,6 +2,9 @@
 // AGENT 3 — PRISOPTIMALISEREREN
 // OPTIMAL = MARKEDSBASE × KVALITETSFAKTOR × KNAPPHETSMULTIPLIKATOR
 //         × LEADTIME_FAKTOR × SESONG_FAKTOR × TREND_FAKTOR
+// Bruker live minPris fra Booking.com som dagensBasispris.
+// Hopper over booket dager (erBooket = true).
+// Bruker live dinScore fra Agent 1 hvis tilgjengelig.
 // ================================================================
 
 const fs   = require("fs");
@@ -10,7 +13,7 @@ const CFG  = require("../config");
 
 function kvalitetsFaktor(dinScore) {
   const markedsScore = 9.0;
-  const gap = markedsScore - dinScore;
+  const gap = markedsScore - (dinScore || CFG.DIN_SCORE);
   return Math.max(0.80, 1 - gap * 0.08);
 }
 
@@ -47,20 +50,32 @@ function trendFaktor(trend) {
   return 1.0;
 }
 
-function beregnOptimalPris(dag) {
-  const ukedag    = dag.ukedag;
-  const basisPris = dag.markedsSnitt || CFG.BASIS_PRIS[ukedag] || 1800;
+function beregnOptimalPris(dag, dinScore) {
+  // Booket dag — ingen prisanbefaling
+  if (dag.erBooket) {
+    return {
+      ...dag,
+      dagensBasispris: null,
+      anbefaltPris: null,
+      avvikProsent: null,
+      strategi: "BOOKET",
+      faktorer: null,
+    };
+  }
 
-  const kf  = kvalitetsFaktor(CFG.DIN_SCORE);
+  const ukedag = dag.ukedag;
+  // Bruk live pris fra Booking.com hvis tilgjengelig, ellers fallback til config
+  const dagensBasispris = dag.minPris || CFG.BASIS_PRIS[ukedag] || 1800;
+
+  const kf  = kvalitetsFaktor(dinScore);
   const km  = knapphetsMultiplikator(dag.knapphetsRatio);
   const ltf = leadTimeFaktor(dag.dagerTilInnsjekk);
   const sf  = sesongFaktor(dag.skisesong, dag.høytid, dag.erHelg);
   const tf  = trendFaktor(dag.prisTrend);
 
-  const råPris      = basisPris * kf * km * ltf * sf * tf;
+  const råPris      = dagensBasispris * kf * km * ltf * sf * tf;
   const optimalpris = Math.round(Math.max(CFG.MIN_PRIS, Math.min(CFG.MAX_PRIS, råPris)));
 
-  const dagensBasispris = CFG.BASIS_PRIS[ukedag] || 1800;
   const avvik = Math.round(((optimalpris - dagensBasispris) / dagensBasispris) * 100);
 
   let strategi;
@@ -78,26 +93,32 @@ function beregnOptimalPris(dag) {
 }
 
 function run() {
-  console.log("💡 Agent 3 — Prisoptimalisereren starter...");
+  console.log("Agent 3 — Prisoptimalisereren starter...");
 
   const analysePath = path.join(__dirname, "..", "data", "analyse.json");
   if (!fs.existsSync(analysePath)) throw new Error("analyse.json mangler — kjør Agent 2 først.");
 
   const analyse = JSON.parse(fs.readFileSync(analysePath, "utf8"));
 
+  // Bruk live dinScore fra Agent 2/1 hvis tilgjengelig
+  const dinScore = analyse.dinScore || analyse.score || CFG.DIN_SCORE;
+  console.log(`   DIN score brukt: ${dinScore}`);
+
   const optimalisert = {
     optimalisert: new Date().toISOString(),
     eiendom: CFG.EIENDOM,
+    dinScore,
     markedstemperatur: analyse.markedstemperatur,
-    oppsummering: { hev: 0, ok: 0, senk: 0, knapphetPremium: 0, sesongPremium: 0, sisteSjanse: 0 },
+    oppsummering: { hev: 0, ok: 0, senk: 0, booket: 0, knapphetPremium: 0, sesongPremium: 0, sisteSjanse: 0 },
     toppHandlinger: [],
     dager: [],
   };
 
-  const alleDager = analyse.dager.map(beregnOptimalPris);
+  const alleDager = analyse.dager.map(dag => beregnOptimalPris(dag, dinScore));
   optimalisert.dager = alleDager;
 
   alleDager.forEach(d => {
+    if (d.strategi === "BOOKET") { optimalisert.oppsummering.booket++; return; }
     if (d.strategi === "HEV" || d.strategi === "KNAPPHET_PREMIUM") optimalisert.oppsummering.hev++;
     else if (d.strategi === "OK") optimalisert.oppsummering.ok++;
     else if (d.strategi === "SENK") optimalisert.oppsummering.senk++;
@@ -106,11 +127,12 @@ function run() {
     if (d.strategi === "SISTE_SJANSE_FYLLING") optimalisert.oppsummering.sisteSjanse++;
   });
 
+  // Topp handlinger — ekskluder booket dager
   optimalisert.toppHandlinger = alleDager
-    .filter(d => d.strategi !== "OK")
+    .filter(d => d.strategi !== "OK" && d.strategi !== "BOOKET" && d.anbefaltPris !== null)
     .sort((a, b) => {
-      const iA = a.urgencyScore * Math.abs(a.anbefaltPris - a.dagensBasispris);
-      const iB = b.urgencyScore * Math.abs(b.anbefaltPris - b.dagensBasispris);
+      const iA = (a.urgencyScore || 0) * Math.abs((a.anbefaltPris || 0) - (a.dagensBasispris || 0));
+      const iB = (b.urgencyScore || 0) * Math.abs((b.anbefaltPris || 0) - (b.dagensBasispris || 0));
       return iB - iA;
     })
     .slice(0, 7);
@@ -118,10 +140,11 @@ function run() {
   const dataDir = path.join(__dirname, "..", "data");
   fs.writeFileSync(path.join(dataDir, "optimalisert.json"), JSON.stringify(optimalisert, null, 2));
 
-  console.log(`\n✅ Agent 3 ferdig.`);
-  console.log(`   📈 Hev/premium:      ${optimalisert.oppsummering.hev} dager`);
-  console.log(`   ✅ OK-priser:         ${optimalisert.oppsummering.ok} dager`);
-  console.log(`   📉 Senk:             ${optimalisert.oppsummering.senk} dager`);
+  console.log(`\nAgent 3 ferdig.`);
+  console.log(`   Hev/premium:      ${optimalisert.oppsummering.hev} dager`);
+  console.log(`   OK-priser:        ${optimalisert.oppsummering.ok} dager`);
+  console.log(`   Senk:             ${optimalisert.oppsummering.senk} dager`);
+  console.log(`   Booket (hopper):  ${optimalisert.oppsummering.booket} dager`);
 }
 
 run();

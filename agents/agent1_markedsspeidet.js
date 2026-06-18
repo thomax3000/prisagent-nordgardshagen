@@ -37,10 +37,10 @@ Format each property exactly as:
 - price: total price for the stay as integer in NOK
 - rating: score 0-10 as float, null if unknown
 - reviews: integer count, null if unknown
-Include ALL properties returned. If zero results, return [].`,
+Include ALL properties returned, including "Nordgards Hagen" if it appears. If zero results, return [].`,
           messages: [{
             role: "user",
-            content: `Search apartments and holiday homes near Lillehammer, Norway. Include "Nordgards Hagen" if it appears.
+            content: `Search apartments and holiday homes near Lillehammer, Norway (including Nordseter, Sjusjoen, Hafjell). Include "Nordgards Hagen" at Sollivegen 23 if it appears.
 Check-in: ${checkIn}, check-out: ${checkOut}. 2 adults, 2 children aged 10.
 Return ALL available properties as JSON array.`,
           }],
@@ -52,7 +52,7 @@ Return ALL available properties as JSON array.`,
       const data = await res.json();
       const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       try { return JSON.parse(text.trim()); } catch {}
-      const m = text.match(/\[\s\S\]*\]/);
+      const m = text.match(/\[[\s\S]*\]/);
       if (m) { try { return JSON.parse(m[0]); } catch {} }
       return [];
 
@@ -150,7 +150,7 @@ async function run() {
 
       kjoring.dager.push(dagData);
       const prisInfo = erBooket ? "BOOKET" : (minPris ? minPris.toLocaleString("nb-NO")+" kr" : "—");
-      console.log(`OK Din: ${prisInfo} | Tilgjengelig: ${antallTilgjengelige}/${CFG.KONKURRENTER.length} | Snitt: ${markedsSnitt ? markedsSnitt.toLocaleString("nb-NO")+" kr" : "—"}`);
+      console.log(`OK Din: ${prisInfo} | Tilg: ${antallTilgjengelige}/${CFG.KONKURRENTER.length} | Snitt: ${markedsSnitt ? markedsSnitt.toLocaleString("nb-NO")+" kr" : "—"}`);
 
     } catch (e) {
       console.log(`Feil: ${e.message}`);
@@ -180,7 +180,10 @@ async function run() {
   const kompakt = {
     dato: kjoring.dato,
     dinScore: kjoring.dinScore,
-    snittMarked: kjoring.dager.map(d => ({ dato: d.dato, snitt: d.markedsSnitt, knapphet: d.knapphetsRatio, minPris: d.minPris, erBooket: d.erBooket })),
+    snittMarked: kjoring.dager.map(d => ({
+      dato: d.dato, snitt: d.markedsSnitt, knapphet: d.knapphetsRatio,
+      minPris: d.minPris, erBooket: d.erBooket,
+    })),
   };
   historikk = [kompakt, ...historikk].slice(0, 90);
   fs.writeFileSync(historikkPath, JSON.stringify(historikk, null, 2));
