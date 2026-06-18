@@ -5,7 +5,7 @@ module.exports = {
   ADRESSE:     "Sollivegen 23, 2611 Lillehammer",
   LAT:         61.1043856,
   LON:         10.5192721,
-    DIN_SCORE:     8.0,           // Booking.com-score for eiendommen (1-10)
+  DIN_SCORE:   8.3,
 
   KONKURRENTER: ["Jorekstad Ferieleiligheter", "Stasjonen Hotel", "The Gingerbread House", "Lillehammer Hostel", "Birkebeineren Hotel & Apartments", "Scandic Victoria Lillehammer", "Scandic Lillehammer Hotel", "Lillehammer Camping - Sentrums leilighet", "Lillehammer Camping"],
 
