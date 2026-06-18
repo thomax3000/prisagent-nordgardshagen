@@ -40,7 +40,7 @@ Format each property exactly as:
 Include ALL properties returned. If zero results, return [].`,
           messages: [{
             role: "user",
-            content: `Search apartments and holiday homes in Lillehammer, Norway (including nearby areas like Nordseter, Sjusjoen, Hafjell).
+            content: `Search apartments and holiday homes near Lillehammer, Norway. Include "Nordgards Hagen" if it appears.
 Check-in: ${checkIn}, check-out: ${checkOut}. 2 adults, 2 children aged 10.
 Return ALL available properties as JSON array.`,
           }],
@@ -52,13 +52,13 @@ Return ALL available properties as JSON array.`,
       const data = await res.json();
       const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       try { return JSON.parse(text.trim()); } catch {}
-      const m = text.match(/\[[\s\S]*\]/);
+      const m = text.match(/\[\s\S\]*\]/);
       if (m) { try { return JSON.parse(m[0]); } catch {} }
       return [];
 
     } catch (e) {
       if (attempt < retries) {
-        console.log(`  Warning: Proever igjen (forsøk ${attempt+2})...`);
+        console.log(`  Warning: Prøver igjen (forsøk ${attempt+2})...`);
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
       } else {
         throw e;
@@ -84,6 +84,7 @@ async function run() {
     dato: toISO(today),
     tidspunkt: new Date().toISOString(),
     eiendom: CFG.EIENDOM,
+    dinScore: null,
     dager: [],
   };
 
@@ -95,6 +96,12 @@ async function run() {
 
     try {
       const props = await searchBooking(checkIn, checkOut);
+
+      // Fang vår egen eiendom FØR filtrering
+      const minEgendom = props.find(p => p.name?.toLowerCase().match(/nordgard/i));
+      const minPris = minEgendom?.price ?? null;
+      const erBooket = !minEgendom;
+      if (minEgendom?.rating && !kjoring.dinScore) kjoring.dinScore = minEgendom.rating;
 
       // Filtrer bort Nordgards Hagen selv
       const marked = props.filter(p =>
@@ -129,6 +136,8 @@ async function run() {
         dato: checkIn,
         ukedag: d.getDay(),
         erHelg: d.getDay() === 5 || d.getDay() === 6,
+        minPris,
+        erBooket,
         antallTilgjengelige,
         totalKonkurrenter: CFG.KONKURRENTER.length,
         knapphetsRatio: parseFloat((1 - antallTilgjengelige / CFG.KONKURRENTER.length).toFixed(2)),
@@ -140,12 +149,14 @@ async function run() {
       };
 
       kjoring.dager.push(dagData);
-      console.log(`OK Tilgjengelig: ${antallTilgjengelige}/${CFG.KONKURRENTER.length} | Snitt: ${markedsSnitt ? markedsSnitt.toLocaleString("nb-NO")+" kr" : "—"}`);
+      const prisInfo = erBooket ? "BOOKET" : (minPris ? minPris.toLocaleString("nb-NO")+" kr" : "—");
+      console.log(`OK Din: ${prisInfo} | Tilgjengelig: ${antallTilgjengelige}/${CFG.KONKURRENTER.length} | Snitt: ${markedsSnitt ? markedsSnitt.toLocaleString("nb-NO")+" kr" : "—"}`);
 
     } catch (e) {
       console.log(`Feil: ${e.message}`);
       kjoring.dager.push({
         dato: checkIn, ukedag: d.getDay(), erHelg: d.getDay()===5||d.getDay()===6,
+        minPris: null, erBooket: false,
         antallTilgjengelige: null, totalKonkurrenter: CFG.KONKURRENTER.length,
         knapphetsRatio: null, markedsSnitt: null, markedsMin: null, markedsMaks: null,
         konkurrenter: {}, feil: e.message,
@@ -168,13 +179,15 @@ async function run() {
   }
   const kompakt = {
     dato: kjoring.dato,
-    snittMarked: kjoring.dager.map(d => ({ dato: d.dato, snitt: d.markedsSnitt, knapphet: d.knapphetsRatio })),
+    dinScore: kjoring.dinScore,
+    snittMarked: kjoring.dager.map(d => ({ dato: d.dato, snitt: d.markedsSnitt, knapphet: d.knapphetsRatio, minPris: d.minPris, erBooket: d.erBooket })),
   };
   historikk = [kompakt, ...historikk].slice(0, 90);
   fs.writeFileSync(historikkPath, JSON.stringify(historikk, null, 2));
 
   const vellykkede = kjoring.dager.filter(d => d.markedsSnitt !== null).length;
-  console.log(`\nAgent 1 ferdig — ${vellykkede}/${CFG.DAGER_FREMOVER} dager hentet.`);
+  const dinScoreTekst = kjoring.dinScore ? `Score: ${kjoring.dinScore}` : "Score: bruker config";
+  console.log(`\nAgent 1 ferdig — ${vellykkede}/${CFG.DAGER_FREMOVER} dager hentet. ${dinScoreTekst}`);
   console.log(`   Historikk: ${historikk.length} dagers data lagret.`);
 }
 
